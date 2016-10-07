@@ -4,7 +4,7 @@
     alias bgt='mkdir src; cd src; mkdir github.com; cd github.com; mkdir stormasm; cd stormasm'
     bgt
     cd src/github.com/stormasm
-    git clone git@github.com:stormasm/nomsleveldb.git
+    git clone git@github.com:stormasm/nomsredis.git
 
     In order to get everything to work you must do at least 2 things
 
