@@ -61,3 +61,18 @@ func (suite *ChunkStoreRedisTestSuite) TestChunkStoreRoot() {
 	result = suite.Store.UpdateRoot(newRoot, oldRoot)
 	suite.True(result)
 }
+
+func (suite *ChunkStoreRedisTestSuite) TestChunkStorePutMany() {
+	input1, input2 := "abc", "def"
+	c1, c2 := NewChunk([]byte(input1)), NewChunk([]byte(input2))
+	suite.Store.PutMany([]Chunk{c1, c2})
+
+	suite.Store.UpdateRoot(c1.Hash(), suite.Store.Root()) // Commit writes
+
+	// And reading it via the API should work...
+	assertInputInStore(input1, c1.Hash(), suite.Store, suite.Assert())
+	assertInputInStore(input2, c2.Hash(), suite.Store, suite.Assert())
+	if suite.putCountFn != nil {
+		suite.Equal(2, suite.putCountFn())
+	}
+}

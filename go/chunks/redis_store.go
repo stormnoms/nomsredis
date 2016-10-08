@@ -116,14 +116,9 @@ func (l *RedisStore) Put(c Chunk) {
 func (l *RedisStore) PutMany(chunks []Chunk) (e BackpressureError) {
 	d.PanicIfFalse(l.internalRedisStore != nil, "Cannot use RedisStore after Close().")
 	l.versionSetOnce.Do(l.setVersIfUnset)
-	numBytes := 0
-	b := new(leveldb.Batch)
 	for _, c := range chunks {
-		data := snappy.Encode(nil, c.Data())
-		numBytes += len(data)
-		b.Put(l.toChunkKey(c.Hash()), data)
+		l.Put(c)
 	}
-	l.putBatch(b, numBytes)
 	return
 }
 
