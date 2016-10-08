@@ -229,7 +229,7 @@ func (l *internalRedisStore) updateRootByKey(key []byte, current, last hash.Hash
 	}
 
 	// Sync: true write option should fsync memtable data to disk
-	err := l.db.Put(key, []byte(current.String()), &opt.WriteOptions{Sync: true})
+	err := l.db.Put(key, []byte(current.String()))
 	d.Chk.NoError(err)
 	return true
 }
