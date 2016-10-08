@@ -168,6 +168,18 @@ func NewRedisConfig() *RedisConfig {
 	return cfg
 }
 
+func getRedisConn() (c redis.Conn){
+
+	cfg := NewRedisConfig()
+	connect_string := cfg.Connect_string()
+	c, err := redis.Dial("tcp", connect_string)
+	if err != nil {
+		panic(err)
+	}
+	return c
+	// defer c.Close()
+}
+
 type internalRedisStore struct {
 	db                                     redis.Conn
 	mu                                     sync.Mutex
@@ -186,13 +198,12 @@ func newRedisBackingStore(dir string, maxFileHandles int, dumpStats bool) *inter
 		WriteBuffer:            1 << 24, // 16MiB,
 	})
 */
-	cfg := NewRedisConfig()
-	connect_string := cfg.Connect_string()
-	c, err := redis.Dial("tcp", connect_string)
-	if err != nil {
-		panic(err)
-	}
+
+	c := getRedisConn()
 	defer c.Close()
+
+	//set
+	c.Do("SET", "santafe", "new mexico")
 
 	//set
 	c.Do("SET", "michael", "angerman")
