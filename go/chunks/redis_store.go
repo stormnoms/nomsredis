@@ -298,16 +298,22 @@ func (l *internalRedisStore) setVersByKey(key []byte) {
 }
 
 func (l *internalRedisStore) hset(field []byte, value []byte) error {
-	_, err := l.db.Do("HSET", "noms-dataset-name", field, value)
+	c := getRedisConn()
+	defer c.Close()
+
+	_, err := c.Do("HSET", "noms-dataset-name", field, value)
 	return err
 }
 
 func (l *internalRedisStore) hget(field []byte) (value []byte, err error) {
 
+	c := getRedisConn()
+	defer c.Close()
+
 	//reply, err := redis.Values(c.Do("MGET", "key1", "key2"))
 
 	//reply, err := redis.Values(l.db.Do("HGET", "noms-dataset-name", field))
-	_, err = redis.Values(l.db.Do("HGET", "noms-dataset-name", field))
+	_, err = redis.Values(c.Do("HGET", "noms-dataset-name", field))
 
 	// send back fake data at the moment until you convert reply to value
 	value = []byte("That's all folks!!")
@@ -316,9 +322,20 @@ func (l *internalRedisStore) hget(field []byte) (value []byte, err error) {
 }
 
 func (l *internalRedisStore) hexists(field []byte) (bool, error) {
+
+	c := getRedisConn()
+	defer c.Close()
+
+
 	//reply, err := redis.Int(l.db.Do("HGET", "noms-dataset-name", field))
-	_, err := redis.Int(l.db.Do("HGET", "noms-dataset-name", field))
+	reply, err := redis.Int(c.Do("HEXISTS", "noms-dataset-name", field))
 	// need to do the actual conversion
+
+	if reply == 0 {
+		return false, err
+	}
+
+
 	return true, err
 }
 
