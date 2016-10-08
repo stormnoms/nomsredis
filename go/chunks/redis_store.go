@@ -190,33 +190,10 @@ type internalRedisStore struct {
 func newRedisBackingStore(dir string, maxFileHandles int, dumpStats bool) *internalRedisStore {
 	d.PanicIfTrue(dir == "", "dir cannot be empty")
 	d.PanicIfError(os.MkdirAll(dir, 0700))
-/*
-	db, err := leveldb.OpenFile(dir, &opt.Options{
-		Compression:            opt.NoCompression,
-		Filter:                 filter.NewBloomFilter(10), // 10 bits/key
-		OpenFilesCacheCapacity: maxFileHandles,
-		WriteBuffer:            1 << 24, // 16MiB,
-	})
-*/
 
 	c := getRedisConn()
 	defer c.Close()
 
-	//set
-	c.Do("SET", "santafe", "new mexico")
-
-	//set
-	c.Do("SET", "michael", "angerman")
-
-	//get
-	world, err := redis.String(c.Do("GET", "michael"))
-	if err != nil {
-		fmt.Println("key not found")
-	}
-
-	fmt.Println(world)
-
-	d.Chk.NoError(err, "opening internalRedisStore in %s", dir)
 	return &internalRedisStore{
 		db:        c,
 		dumpStats: dumpStats,
