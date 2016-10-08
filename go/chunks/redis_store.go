@@ -18,8 +18,8 @@ import (
 	flag "github.com/juju/gnuflag"
 	"github.com/syndtr/goleveldb/leveldb"
 	"github.com/syndtr/goleveldb/leveldb/errors"
-	"github.com/syndtr/goleveldb/leveldb/filter"
-	"github.com/syndtr/goleveldb/leveldb/opt"
+	//"github.com/syndtr/goleveldb/leveldb/filter"
+	//"github.com/syndtr/goleveldb/leveldb/opt"
 	"github.com/garyburd/redigo/redis"
 )
 
@@ -143,7 +143,7 @@ func (l *RedisStore) toChunkKey(r hash.Hash) []byte {
 }
 
 func (l *RedisStore) setVersIfUnset() {
-	exists, err := l.db.Has(l.versionKey, nil)
+	exists, err := l.hexists(l.versionKey)
 	d.Chk.NoError(err)
 	if !exists {
 		l.setVersByKey(l.versionKey)
@@ -178,13 +178,14 @@ type internalRedisStore struct {
 func newRedisBackingStore(dir string, maxFileHandles int, dumpStats bool) *internalRedisStore {
 	d.PanicIfTrue(dir == "", "dir cannot be empty")
 	d.PanicIfError(os.MkdirAll(dir, 0700))
+/*
 	db, err := leveldb.OpenFile(dir, &opt.Options{
 		Compression:            opt.NoCompression,
 		Filter:                 filter.NewBloomFilter(10), // 10 bits/key
 		OpenFilesCacheCapacity: maxFileHandles,
 		WriteBuffer:            1 << 24, // 16MiB,
 	})
-
+*/
 	cfg := NewRedisConfig()
 	connect_string := cfg.Connect_string()
 	c, err := redis.Dial("tcp", connect_string)
@@ -257,7 +258,7 @@ func (l *internalRedisStore) getByKey(key []byte, ref hash.Hash) Chunk {
 }
 
 func (l *internalRedisStore) hasByKey(key []byte) bool {
-	exists, err := l.db.Has(key, &opt.ReadOptions{DontFillCache: true}) // This isn't really a "read", so don't signal the cache to treat it as one.
+	exists, err := l.hexists(key)
 	d.Chk.NoError(err)
 	l.hasCount++
 	return exists
@@ -286,7 +287,7 @@ func (l *internalRedisStore) setVersByKey(key []byte) {
 }
 
 func (l *internalRedisStore) hset(field []byte, value []byte) error {
-	n, err := l.db.Do("HSET", "noms-dataset-name", field, value)
+	_, err := l.db.Do("HSET", "noms-dataset-name", field, value)
 	return err
 }
 
@@ -294,12 +295,20 @@ func (l *internalRedisStore) hget(field []byte) (value []byte, err error) {
 
 	//reply, err := redis.Values(c.Do("MGET", "key1", "key2"))
 
-	reply, err := redis.Values(l.db.Do("HGET", "noms-dataset-name", field))
+	//reply, err := redis.Values(l.db.Do("HGET", "noms-dataset-name", field))
+	_, err = redis.Values(l.db.Do("HGET", "noms-dataset-name", field))
 
 	// send back fake data at the moment until you convert reply to value
 	value = []byte("That's all folks!!")
 
 	return value,err
+}
+
+func (l *internalRedisStore) hexists(field []byte) (bool, error) {
+	//reply, err := redis.Int(l.db.Do("HGET", "noms-dataset-name", field))
+	_, err := redis.Int(l.db.Do("HGET", "noms-dataset-name", field))
+	// need to do the actual conversion
+	return true, err
 }
 
 func (l *internalRedisStore) putByKey(key []byte, c Chunk) {
@@ -315,10 +324,13 @@ func (l *internalRedisStore) putByKey(key []byte, c Chunk) {
 }
 
 func (l *internalRedisStore) putBatch(b *leveldb.Batch, numBytes int) {
+/*
 	err := l.db.Write(b, nil)
 	d.Chk.NoError(err)
 	l.putCount += int64(b.Len())
 	l.putBytes += int64(numBytes)
+*/
+	fmt.Println("Currently not yet implemented")
 }
 
 func (l *internalRedisStore) Close() error {
