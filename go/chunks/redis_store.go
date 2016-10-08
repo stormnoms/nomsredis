@@ -229,9 +229,10 @@ func (l *internalRedisStore) rootByKey(key []byte) hash.Hash {
 
 	val, err := l.hget(key)
 
-	if err == errors.ErrNotFound {
+	if len(val) == 0 {
 		return hash.Hash{}
 	}
+
 	d.Chk.NoError(err)
 
 	return hash.Parse(string(val))
@@ -313,10 +314,10 @@ func (l *internalRedisStore) hget(field []byte) (value []byte, err error) {
 	//reply, err := redis.Values(c.Do("MGET", "key1", "key2"))
 
 	//reply, err := redis.Values(l.db.Do("HGET", "noms-dataset-name", field))
-	_, err = redis.Values(c.Do("HGET", "noms-dataset-name", field))
+	value, err = redis.Bytes(c.Do("HGET", "noms-dataset-name", field))
 
 	// send back fake data at the moment until you convert reply to value
-	value = []byte("That's all folks!!")
+	//value = []byte("That's all folks!!")
 
 	return value,err
 }
