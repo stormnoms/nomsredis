@@ -20,6 +20,7 @@ import (
 	"github.com/syndtr/goleveldb/leveldb/errors"
 	"github.com/syndtr/goleveldb/leveldb/filter"
 	"github.com/syndtr/goleveldb/leveldb/opt"
+	"github.com/garyburd/redigo/redis"
 )
 
 /*
@@ -149,8 +150,26 @@ func (l *RedisStore) setVersIfUnset() {
 	}
 }
 
+type RedisConfig struct {
+	Hostname string
+	Port     string
+}
+
+func (c *RedisConfig) Connect_string() string {
+	connect := fmt.Sprint(c.Hostname, ":", c.Port)
+	return connect
+}
+
+func NewRedisConfig() *RedisConfig {
+	cfg := &RedisConfig{
+		Hostname: "localhost",
+		Port:     "6379",
+	}
+	return cfg
+}
+
 type internalRedisStore struct {
-	db                                     *rateLimitedLevelDB
+	db                                     redis.Conn
 	mu                                     sync.Mutex
 	getCount, hasCount, putCount, putBytes int64
 	dumpStats                              bool
@@ -165,9 +184,29 @@ func newRedisBackingStore(dir string, maxFileHandles int, dumpStats bool) *inter
 		OpenFilesCacheCapacity: maxFileHandles,
 		WriteBuffer:            1 << 24, // 16MiB,
 	})
+
+	cfg := NewRedisConfig()
+	connect_string := cfg.Connect_string()
+	c, err := redis.Dial("tcp", connect_string)
+	if err != nil {
+		panic(err)
+	}
+	defer c.Close()
+
+	//set
+	c.Do("SET", "michael", "angerman")
+
+	//get
+	world, err := redis.String(c.Do("GET", "michael"))
+	if err != nil {
+		fmt.Println("key not found")
+	}
+
+	fmt.Println(world)
+
 	d.Chk.NoError(err, "opening internalRedisStore in %s", dir)
 	return &internalRedisStore{
-		db:        &rateLimitedLevelDB{db, make(chan struct{}, maxFileHandles)},
+		db:        c,
 		dumpStats: dumpStats,
 	}
 }
@@ -230,7 +269,9 @@ func (l *internalRedisStore) setVersByKey(key []byte) {
 
 func (l *internalRedisStore) putByKey(key []byte, c Chunk) {
 	data := snappy.Encode(nil, c.Data())
+
 	err := l.db.Put(key, data, nil)
+
 	d.Chk.NoError(err)
 	l.putCount++
 	l.putBytes += int64(len(data))
