@@ -229,7 +229,9 @@ func (l *internalRedisStore) updateRootByKey(key []byte, current, last hash.Hash
 	}
 
 	// Sync: true write option should fsync memtable data to disk
-	err := l.db.Put(key, []byte(current.String()))
+	// err := l.db.Put(key, []byte(current.String()))
+	err := l.hset(key,[]byte(current.String()))
+
 	d.Chk.NoError(err)
 	return true
 }
@@ -263,14 +265,25 @@ func (l *internalRedisStore) versByKey(key []byte) string {
 }
 
 func (l *internalRedisStore) setVersByKey(key []byte) {
-	err := l.db.Put(key, []byte(constants.NomsVersion), nil)
+
+	// old method
+	// err := l.db.Put(key, []byte(constants.NomsVersion), nil)
+	err := l.hset(key,[]byte(constants.NomsVersion))
+
 	d.Chk.NoError(err)
+}
+
+func (l *internalRedisStore) hset(field []byte, value []byte) error {
+	n, err := l.db.Do("HSET", "noms-dataset-name", field, value)
+	return err
 }
 
 func (l *internalRedisStore) putByKey(key []byte, c Chunk) {
 	data := snappy.Encode(nil, c.Data())
 
-	err := l.db.Put(key, data, nil)
+	// old method
+	// err := l.db.Put(key, data, nil)
+	err := l.hset(key,data)
 
 	d.Chk.NoError(err)
 	l.putCount++
