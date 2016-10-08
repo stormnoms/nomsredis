@@ -212,7 +212,11 @@ func newRedisBackingStore(dir string, maxFileHandles int, dumpStats bool) *inter
 }
 
 func (l *internalRedisStore) rootByKey(key []byte) hash.Hash {
-	val, err := l.db.Get(key, nil)
+	// old way
+	// val, err := l.db.Get(key, nil)
+
+	val, err := l.hget(key)
+
 	if err == errors.ErrNotFound {
 		return hash.Hash{}
 	}
@@ -237,7 +241,11 @@ func (l *internalRedisStore) updateRootByKey(key []byte, current, last hash.Hash
 }
 
 func (l *internalRedisStore) getByKey(key []byte, ref hash.Hash) Chunk {
-	compressed, err := l.db.Get(key, nil)
+	// old way
+	// compressed, err := l.db.Get(key, nil)
+
+	compressed, err := l.hget(key)
+
 	l.getCount++
 	if err == errors.ErrNotFound {
 		return EmptyChunk
@@ -256,7 +264,11 @@ func (l *internalRedisStore) hasByKey(key []byte) bool {
 }
 
 func (l *internalRedisStore) versByKey(key []byte) string {
-	val, err := l.db.Get(key, nil)
+	// old way
+	// val, err := l.db.Get(key, nil)
+
+	val, err := l.hget(key)
+
 	if err == errors.ErrNotFound {
 		return constants.NomsVersion
 	}
@@ -276,6 +288,18 @@ func (l *internalRedisStore) setVersByKey(key []byte) {
 func (l *internalRedisStore) hset(field []byte, value []byte) error {
 	n, err := l.db.Do("HSET", "noms-dataset-name", field, value)
 	return err
+}
+
+func (l *internalRedisStore) hget(field []byte) (value []byte, err error) {
+
+	//reply, err := redis.Values(c.Do("MGET", "key1", "key2"))
+
+	reply, err := redis.Values(l.db.Do("HGET", "noms-dataset-name", field))
+
+	// send back fake data at the moment until you convert reply to value
+	value = []byte("That's all folks!!")
+
+	return value,err
 }
 
 func (l *internalRedisStore) putByKey(key []byte, c Chunk) {
